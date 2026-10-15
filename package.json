@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:inbound": "node --test tests/inbound.node.mjs"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +17,8 @@
     "@playwright/test": "^1.64.1",
     "wrangler": "^4.151.0"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "postal-mime": "^4.0.7"
+  }
 }

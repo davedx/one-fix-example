@@ -1,11 +1,15 @@
 import { conversationAPI, newToken, tokenHash, notifyCustomer } from './conversations.js';
+import { receiveEmail } from './inbound.js';
 
 const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
 
 export default {
+  email: receiveEmail,
   async scheduled(_controller, env) {
     await env.DB.batch([
+      env.DB.prepare("DELETE FROM inbox_attachments WHERE inbox_id IN (SELECT id FROM inbox WHERE received_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days'))"),
+      env.DB.prepare("DELETE FROM inbox WHERE received_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')"),
       env.DB.prepare("DELETE FROM messages WHERE request_id IN (SELECT id FROM requests WHERE status IN ('new','invited','reviewing','accepted','declined') AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days'))"),
       env.DB.prepare("DELETE FROM conversations WHERE request_id IN (SELECT id FROM requests WHERE status IN ('new','invited','reviewing','accepted','declined') AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days'))"),
       env.DB.prepare("DELETE FROM requests WHERE status IN ('new','invited','reviewing','accepted','declined') AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')"),

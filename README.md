@@ -16,21 +16,29 @@ The live service has separate private operations for scope review, quotes, verif
 
 ## Run locally
 
-Node.js 22 or later:
+Node.js 24 or later:
 
 ```sh
 npm ci
 npx wrangler d1 execute one-fix-example --local --file=schema.sql
 npx wrangler d1 execute one-fix-example --local --file=conversation-schema.sql
+npx wrangler d1 execute one-fix-example --local --file=inbox-schema.sql
 npx playwright install chromium
 npm test
+npm run test:inbound
 npm run dev -- --var EMAIL_DISABLED:true
 ```
 
-The tests disable email. Do not supply real email credentials for local browser checks. To deploy your own copy, create a D1 database, replace the sample database ID in `wrangler.jsonc`, apply both SQL schemas remotely, and configure your own sender and Resend secret. Adapt the seller/legal copy to your business before publishing it.
+The tests disable email. Do not supply real email credentials for local browser checks. To deploy your own copy, create a D1 database, replace the sample database ID in `wrangler.jsonc`, apply all three SQL schemas remotely, and configure your own sender and Resend secret. Adapt the seller/legal copy to your business before publishing it.
 
 ## The service
 
 One agreed, reproducible frontend repair for EUR 49 total: a patch or PR, verification notes, and one correction. Scope, code access and deadline are confirmed before payment. The customer controls deployment. If we cannot deliver the agreed scope, we refund it.
 
 [Free scope check and private conversation](https://remontoire.ai/?ref=github-example#request)
+
+## Optional email fallback
+
+The Worker can receive future messages addressed to onefix@remontoire.ai when an Email Routing rule points to it. Adapt that address in src/inbound.js for your own deployment; no mail route is created by this sample configuration. Incoming messages are untrusted queue entries, not paid orders or authorization. The private operations used to read and acknowledge them are not in this snapshot.
+
+The handler enforces a 1 MiB input limit, stores at most32k characters plus an omission notice, decodes MIME, omits attachment bytes, redacts quoted website conversation keys and deduplicates retransmissions by retained content. HTML-only messages stay labelled source in the private queue and are never rendered by the website. Daily retention deletes email older than30days. It sends no automatic replies and forwards nothing to an operator. Seven Node/SQLite tests cover ingestion, content conflicts, limits and retention.
