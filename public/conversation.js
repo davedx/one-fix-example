@@ -4,6 +4,8 @@ const status = document.querySelector('#message-status');
 const form = document.querySelector('#message-form');
 const headers = {authorization:`Bearer ${token}`};
 let sendingId;
+const input = document.querySelector('#message');
+input.addEventListener('input',()=>{sendingId=undefined;});
 async function load() {
   const response=await fetch('/api/conversation',{headers,cache:'no-store'});
   const data=await response.json();
@@ -27,14 +29,14 @@ async function load() {
   }
 }
 form.addEventListener('submit',async event=>{
-  event.preventDefault();const button=form.querySelector('button');button.disabled=true;
+  event.preventDefault();const button=form.querySelector('button');button.disabled=true;input.readOnly=true;
   try {
     sendingId ||= crypto.randomUUID();
     const response=await fetch('/api/conversation',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({id:sendingId,body:document.querySelector('#message').value})});
     const data=await response.json();if(!response.ok) throw new Error(data.error || 'Message not saved.');
     sendingId=undefined;form.reset();await load();status.textContent='Message saved. You can return using this same private link.';
   } catch(error) { status.textContent=error.message; }
-  finally {button.disabled=false;}
+  finally {button.disabled=false;input.readOnly=false;}
 });
 load().catch(error=>{status.textContent=error.message;form.hidden=true;});
 setInterval(()=>{if(!document.hidden)load().catch(error=>{status.textContent=error.message;});},30000);

@@ -38,6 +38,11 @@ test('a mobile visitor can submit an issue and gets a durable reference', async 
   await page.request.post('/api/conversation',{headers:postHeaders,data:payload});
   const after = await (await page.request.get('/api/conversation',{headers:auth})).json();
   expect(after.messages).toHaveLength(2);
+  const changed = await page.request.post('/api/conversation',{headers:postHeaders,data:{...payload,body:'Changed text must not be silently lost'}});
+  expect(changed.status()).toBe(409);
+  const unchanged = await (await page.request.get('/api/conversation',{headers:auth})).json();
+  expect(unchanged.messages).toHaveLength(2);
+  expect(unchanged.messages.some(message=>message.body==='Same request retry')).toBe(true);
   execFileSync('npx',['wrangler','d1','execute','one-fix-example','--local','--command',`INSERT INTO messages(id,request_id,role,body,reviewed) VALUES ('${crypto.randomUUID()}','${record.id}','agent','Scope confirmed. Reply here before payment.',1)`]);
   await page.reload();
   await expect(page.locator('#thread')).toContainText('Scope confirmed. Reply here before payment.');

@@ -25,9 +25,13 @@ export async function conversationAPI(request, env) {
   try { data=JSON.parse(raw); } catch { return json({error:'Invalid message.'},400); }
   const body = typeof data?.body === 'string' ? data.body.trim() : '';
   if (!body || body.length > 6000 || !/^[a-f0-9-]{36}$/.test(data?.id || '')) return json({error:'Write a message of up to 6,000 characters.'},400);
+  const messageId = `${conversation.id}:${data.id}`;
+  const previous = await env.DB.prepare('SELECT body FROM messages WHERE id=?').bind(messageId).first();
+  if (previous) return previous.body === body ? json({ok:true},201) : json({error:'This message identifier was already used for different text. Reload the conversation and send again.'},409);
   const count = await env.DB.prepare("SELECT count(*) AS n FROM messages WHERE request_id=? AND role='customer' AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 hour')").bind(conversation.id).first();
   if (count.n >= 30) return json({error:'Message limit reached. Please try again in an hour.'},429);
-  await env.DB.prepare("INSERT OR IGNORE INTO messages(id,request_id,role,body) VALUES (?,?,'customer',?)").bind(`${conversation.id}:${data.id}`,conversation.id,body).run();
+  const saved = await env.DB.prepare("INSERT INTO messages(id,request_id,role,body) VALUES (?,?,'customer',?) ON CONFLICT(id) DO UPDATE SET id=excluded.id RETURNING body").bind(messageId,conversation.id,body).first();
+  if (saved.body !== body) return json({error:'This message identifier was already used for different text. Reload the conversation and send again.'},409);
   return json({ok:true},201);
 }
 
